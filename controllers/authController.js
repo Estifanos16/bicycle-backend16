@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 // REGISTER USER
 exports.registerUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, roles } = req.body;
 
     // check if user exists
     const userExists = await User.findOne({ email });
@@ -21,7 +21,7 @@ exports.registerUser = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role
+      roles: roles && roles.length > 0 ? roles : ['customer']
     });
 
     res.status(201).json({
@@ -55,7 +55,7 @@ exports.loginUser = async (req, res) => {
 
     // create JWT token
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      { id: user._id, roles: user.roles, email: user.email, name: user.name },
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
     );
@@ -67,7 +67,7 @@ exports.loginUser = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
+        roles: user.roles
       }
     });
 

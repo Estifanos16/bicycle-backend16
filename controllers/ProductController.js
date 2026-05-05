@@ -3,11 +3,12 @@ const Product = require('../models/Product');
 exports.createProduct = async (req, res) => {
 
     try {
-        const { name, price, description, stock } = req.body;
+        const { name, price, description, category, stock } = req.body;
         const product = await Product.create({
             name,
             price,
             description,
+            category,
             stock,
             supermarketId: req.user._id
         });
@@ -59,10 +60,11 @@ exports.updateProduct = async (req, res) => {
         if (product.supermarketId.toString() !== req.user._id.toString()) {
             return res.status(403).json({ message: 'Unauthorized' });
         }
-        const { name, price, description, stock } = req.body;
+        const { name, price, description, category, stock } = req.body;
             if (name) product.name = name;
             if (price) product.price = price;
             if (description) product.description = description;
+            if (category !== undefined) product.category = category;
             if (stock !== undefined) product.stock = stock;         
         await product.save();
         res.status(200).json({ message: 'Product updated', product });

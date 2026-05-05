@@ -1,6 +1,6 @@
 exports.authorizeRoles = (...roles) => {
     return (req, res, next) => {
-        if (!roles.includes(req.user.role)) {
+        if (!req.user.roles.some(role => roles.includes(role))) {
             return res.status(403).json({ message: 'Access denied' });
         }
         next();

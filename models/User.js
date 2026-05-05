@@ -14,10 +14,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  role: {
-    type: String,
+  roles: {
+    type: [String],
     enum: ['customer', 'rider', 'supermarket', 'admin'],
-    default: 'customer'
+    default: ['customer']
   },
   phone: String,
   address: String
