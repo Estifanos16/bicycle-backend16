@@ -16,7 +16,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: "https://bicycle-frontend.vercel.app",
+  origin: "https://bicycle-frontend-rrsi.vercel.app",
   credentials: true
 }));
 app.use(express.json());
