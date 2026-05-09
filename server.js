@@ -16,7 +16,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'https://portfolio-chi-plum-9ujxzihyw9.vercel.app/',
+  origin: process.env.FRONTEND_URL || 'https://bicycle-frontend.vercel.app',
   credentials: true
 }));
 app.use(express.json());
