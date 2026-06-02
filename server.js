@@ -16,14 +16,22 @@ const app = express();
 
 // Middleware
 const allowedOrigins = [
-  process.env.FRONTEND_URL || 'https://bicycle-frontend-rrsi.vercel.app',
+  // Clean the env variable if it exists, removing any accidental trailing slash
+  process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, "") : 'https://bicycle-frontend-rrsi.vercel.app',
   'https://bicycle-frontend.vercel.app',
+  'http://localhost:5173',  // For local Vite development
+  'http://localhost:3000'   // For local React development
 ];
+
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Strip trailing slash from incoming request origin for an exact match
+    const sanitizedOrigin = origin ? origin.replace(/\/$/, "") : null;
+
+    if (!sanitizedOrigin || allowedOrigins.includes(sanitizedOrigin)) {
       callback(null, true);
     } else {
+      console.log(`Blocked by CORS: ${origin}`); // This will log the exact blocked URL in Render logs
       callback(new Error('Not allowed by CORS'));
     }
   },
