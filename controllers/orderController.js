@@ -6,10 +6,21 @@ exports.createOrder = async (req, res) => {
 
   try {
 
-    const { items, deliveryAddress, supermarketId } = req.body;
+    const { items, deliveryAddress, vendorId, idempotencyKey } = req.body;
 
     if (!items || items.length === 0) {
       return res.status(400).json({ message: "No items in order" });
+    }
+
+    // Check for idempotency to prevent duplicate orders
+    if (idempotencyKey) {
+      const existingOrder = await Order.findOne({ idempotencyKey });
+      if (existingOrder) {
+        return res.status(200).json({
+          message: "Order already processed",
+          order: existingOrder
+        });
+      }
     }
     
     let orderItems = [];
@@ -23,32 +34,57 @@ exports.createOrder = async (req, res) => {
         return res.status(404).json({ message: "Product not found" });
       }
 
-      if (product.stock < item.quantity) {
+      // Atomic stock decrement with guard pattern
+      const updatedProduct = await Product.findOneAndUpdate(
+        { _id: item.productId, stock: { $gte: item.quantity } },
+        { $inc: { stock: -item.quantity } },
+        { new: true }
+      );
+
+      if (!updatedProduct) {
         return res.status(400).json({ message: "Not enough stock" });
       }
 
-      const itemTotal = product.price * item.quantity;
+      const itemTotal = updatedProduct.price * item.quantity;
 
       totalPrice += itemTotal;
 
       orderItems.push({
-        name: product.name,
+        productId: item.productId,
+        name: updatedProduct.name,
         quantity: item.quantity,
-        price: product.price
+        price: updatedProduct.price
       });
-
-    // Reduce stock
-      product.stock -= item.quantity;
-      await product.save();
     }
 
-    // Create order
+    // Create order with new structure
+    const orderNumber = 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+    
     const order = await Order.create({
+      orderNumber,
       customerId: req.user._id,
-      supermarketId,
+      vendorId: vendorId, // Use vendorId from request
       items: orderItems,
-      totalPrice,
-      deliveryAddress
+      status: 'created',
+      statusHistory: [{
+        status: 'created',
+        timestamp: new Date(),
+        actorId: req.user._id
+      }],
+      pricing: {
+        subtotal: totalPrice,
+        deliveryFee: 0,
+        serviceFee: 0,
+        tax: 0,
+        discount: 0,
+        tip: 0,
+        total: totalPrice,
+        currency: 'USD'
+      },
+      deliveryAddress: {
+        fullAddress: deliveryAddress
+      },
+      idempotencyKey: idempotencyKey || null
     });
 
     res.status(201).json({
@@ -112,6 +148,14 @@ exports.updateOrderStatus = async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
+    // Add status history entry
+    order.statusHistory.push({
+      status: status,
+      timestamp: new Date(),
+      actorId: req.user._id,
+      notes: `Status changed from ${order.status} to ${status}`
+    });
+
     order.status = status;
 
     await order.save();
@@ -144,9 +188,10 @@ exports.getMyDeliveries = async (req,res) => {
   }
 };
 
-exports.getSupermarketOrders = async (req, res) => {
+exports.getVendorOrders = async (req, res) => {
   try {
-    const orders = await Order.find({ supermarketId: req.user._id });
+    const userVendorId = req.user.vendorId || req.user._id;
+    const orders = await Order.find({ vendorId: userVendorId });
     res.status(200).json(orders);
   } catch (error) {
     res.status(500).json({_message: error.message});

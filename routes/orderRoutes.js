@@ -7,7 +7,7 @@ const {
   updateOrderStatus,
   getMyOrders,
   getMyDeliveries,
-  getSupermarketOrders
+  getVendorOrders
 } = require('../controllers/orderController');
 const { protect } = require('../middleware/authMiddleware');
 const { authorizeRoles } = require('../middleware/roleMiddleware');
@@ -18,10 +18,10 @@ router.post('/', protect, authorizeRoles('customer'), createOrder);
 // Rider gets pending orders
 router.get('/pending', protect, getPendingOrders);
 
-// Get my orders/deliveries/supermarket orders
+// Get my orders/deliveries/vendor orders
 router.get('/my-orders', protect, getMyOrders);
 router.get('/my-deliveries', protect, getMyDeliveries);
-router.get('/supermarket-orders', protect, getSupermarketOrders);
+router.get('/vendor-orders', protect, authorizeRoles('vendor_staff', 'admin'), getVendorOrders);
 
 // Rider accepts order
 router.put('/accept/:id', protect, authorizeRoles('rider'), acceptOrder);

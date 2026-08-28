@@ -100,11 +100,16 @@ exports.loginUser = async (req, res) => {
         id: user._id, 
         roles: user.roles, 
         email: user.email, 
-        name: user.name 
+        name: user.name,
+        vendorId: user.vendorId
       },
       process.env.JWT_SECRET || 'fallback_secret_key',
       { expiresIn: '7d' }
     );
+
+    // Update last login
+    user.lastLoginAt = new Date();
+    await user.save();
 
     res.status(200).json({
       message: 'Login successful',
@@ -113,7 +118,8 @@ exports.loginUser = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        roles: user.roles
+        roles: user.roles,
+        vendorId: user.vendorId
       }
     });
 

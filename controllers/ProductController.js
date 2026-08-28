@@ -4,15 +4,8 @@ exports.createProduct = async (req, res) => {
 
     try {
         const { name, price, description, category, stock } = req.body;
-        const product = await Product.create({
-            name,
-            price,
-            description,
-            category,
-            stock,
-            supermarketId: req.user._id
-        });
 
+        // Validation before creation
         if (!name || !price) {
             return res.status(400).json({ message: 'Name and price are required' });
         }
@@ -22,10 +15,22 @@ exports.createProduct = async (req, res) => {
         if (stock < 0) {
             return res.status(400).json({ message: 'Stock cannot be negative' });
         }
+
+        const product = await Product.create({
+            name,
+            price,
+            description,
+            category,
+            stock,
+            vendorId: req.user.vendorId || req.user._id // Use vendorId if available, otherwise user._id for backward compatibility
+        });
+
         if (!product) {
             return res.status(400).json({ message: 'Invalid product data' });
         }
-        if (product.supermarketId.toString() !== req.user._id.toString()) {
+        // Check authorization: user must own the vendor or be the vendor staff
+        const userVendorId = req.user.vendorId || req.user._id;
+        if (product.vendorId.toString() !== userVendorId.toString()) {
             return res.status(403).json({ message: 'Unauthorized' });
         } 
         
@@ -43,7 +48,7 @@ exports.createProduct = async (req, res) => {
 exports.getProducts = async (req, res) => {
 
     try {
-        const products = await Product.find().populate('supermarketId', 'name email');
+        const products = await Product.find().populate('vendorId', 'name logoUrl');
         res.status(200).json(products);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -57,7 +62,8 @@ exports.updateProduct = async (req, res) => {
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
         }   
-        if (product.supermarketId.toString() !== req.user._id.toString()) {
+        const userVendorId = req.user.vendorId || req.user._id;
+        if (product.vendorId.toString() !== userVendorId.toString()) {
             return res.status(403).json({ message: 'Unauthorized' });
         }
         const { name, price, description, category, stock } = req.body;
@@ -80,7 +86,8 @@ exports.deleteProduct = async (req, res) => {
             return res.status(404).json({ message: 'Product not found' });
         }
 
-        if (product.supermarketId.toString() !== req.user._id.toString()) {
+        const userVendorId = req.user.vendorId || req.user._id;
+        if (product.vendorId.toString() !== userVendorId.toString()) {
             return res.status(403).json({ message: 'Unauthorized' });
         }
 
@@ -93,7 +100,7 @@ exports.deleteProduct = async (req, res) => {
 
 exports.getProductById = async (req, res) => {  
     try {
-        const product = await Product.findById(req.params.id).populate('supermarketId', 'name email');
+        const product = await Product.findById(req.params.id).populate('vendorId', 'name logoUrl');
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
         }   
@@ -103,16 +110,13 @@ exports.getProductById = async (req, res) => {
     }       
 };  
 
-exports.getProductsBySupermarket = async (req, res) => {
+exports.getProductsByVendor = async (req, res) => {
     try {
-        const products = await Product.find({ supermarketId: req.params.supermarketId }).populate('supermarketId', 'name email');       
+        const products = await Product.find({ vendorId: req.params.vendorId }).populate('vendorId', 'name logoUrl');       
         res.status(200).json(products);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }       
-}; 
- 
-
-
+};
 
 
