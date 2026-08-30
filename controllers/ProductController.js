@@ -5,6 +5,10 @@ exports.createProduct = async (req, res) => {
     try {
         const { name, price, description, category, stock } = req.body;
 
+        console.log('Request body keys:', Object.keys(req.body));
+        console.log('Has image?', !!req.body.image);
+        console.log('Image length:', req.body.image ? req.body.image.length : 0);
+
         // Validation before creation
         if (!name || !price) {
             return res.status(400).json({ message: 'Name and price are required' });
@@ -16,13 +20,41 @@ exports.createProduct = async (req, res) => {
             return res.status(400).json({ message: 'Stock cannot be negative' });
         }
 
-        const product = await Product.create({
+        // Handle image upload
+        let images = [];
+        if (req.body.image) {
+            // Image is sent as base64 string
+            console.log('Image received, length:', req.body.image.length);
+            images = [req.body.image];
+        }
+
+        const productData = {
             name,
             price,
             description,
             category,
             stock,
-            vendorId: req.user.vendorId || req.user._id // Use vendorId if available, otherwise user._id for backward compatibility
+            vendorId: req.user.vendorId || req.user._id
+        };
+
+        // Only add images if they exist
+        if (images.length > 0) {
+            productData.images = images;
+        }
+
+        console.log('Creating product with data:', { 
+            ...productData, 
+            images: images.length > 0 ? `[${images.length} base64 images]` : 'none',
+            vendorId: productData.vendorId
+        });
+
+        const product = await Product.create(productData);
+
+        console.log('Product created successfully:', { 
+            _id: product._id, 
+            name: product.name,
+            images: product.images ? product.images.length : 0,
+            hasImagesField: !!product.images 
         });
 
         if (!product) {
@@ -40,6 +72,7 @@ exports.createProduct = async (req, res) => {
             product
         });
     } catch (error) {
+        console.error('Error creating product:', error);
         res.status(500).json({ message: error.message });
     }
 
@@ -71,7 +104,13 @@ exports.updateProduct = async (req, res) => {
             if (price) product.price = price;
             if (description) product.description = description;
             if (category !== undefined) product.category = category;
-            if (stock !== undefined) product.stock = stock;         
+            if (stock !== undefined) product.stock = stock;
+        
+        // Handle image upload
+        if (req.body.image) {
+            product.images = [req.body.image];
+        }
+        
         await product.save();
         res.status(200).json({ message: 'Product updated', product });
     } catch (error) {
