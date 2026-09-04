@@ -14,7 +14,7 @@ const protect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
 
       // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key');
 
       // Get user from token
       req.user = await User.findById(decoded.id).select('-password');
@@ -24,16 +24,32 @@ const protect = async (req, res, next) => {
         return;
       }
 
-      next();
+      return next();
     } catch (error) {
       console.error(error);
-      res.status(401).json({ message: 'Not authorized, token failed' });
+      return res.status(401).json({ message: 'Not authorized, token failed' });
     }
   }
 
   if (!token) {
-    res.status(401).json({ message: 'Not authorized, no token' });
+    return res.status(401).json({ message: 'Not authorized, no token' });
   }
 };
 
-module.exports = { protect };
+const optionalProtect = async (req, res, next) => {
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    try {
+      const token = req.headers.authorization.split(' ')[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key');
+      req.user = await User.findById(decoded.id).select('-password');
+    } catch (error) {
+      console.warn('Optional auth token check skipped/invalid:', error.message);
+    }
+  }
+  next();
+};
+
+module.exports = { protect, optionalProtect };

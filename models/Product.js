@@ -39,8 +39,15 @@ const productSchema = new mongoose.Schema({
   barcode: String,
   vendorId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Vendor',
-    required: true
+    ref: 'Vendor'
+  },
+  vendor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Vendor'
+  },
+  supermarketId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Vendor'
   },
   isAvailable: {
     type: Boolean,
@@ -56,7 +63,7 @@ const productSchema = new mongoose.Schema({
   },
   nutritionInfo: String,
   tags: [String]
-}, { timestamps: true });
+}, { timestamps: true, strict: false });
 
 // Index for efficient vendor product lookups
 productSchema.index({ vendorId: 1, category: 1 });

@@ -94,6 +94,9 @@ exports.loginUser = async (req, res) => {
       });
     }
 
+    const vendorId = user.vendorId || user.supermarketId;
+    const supermarketId = user.supermarketId || user.vendorId;
+
     // Create JWT token
     const token = jwt.sign(
       { 
@@ -101,7 +104,8 @@ exports.loginUser = async (req, res) => {
         roles: user.roles, 
         email: user.email, 
         name: user.name,
-        vendorId: user.vendorId
+        vendorId: vendorId,
+        supermarketId: supermarketId
       },
       process.env.JWT_SECRET || 'fallback_secret_key',
       { expiresIn: '7d' }
@@ -119,7 +123,8 @@ exports.loginUser = async (req, res) => {
         name: user.name,
         email: user.email,
         roles: user.roles,
-        vendorId: user.vendorId
+        vendorId: vendorId,
+        supermarketId: supermarketId
       }
     });
 

@@ -67,8 +67,12 @@ const userSchema = new mongoose.Schema({
   vendorId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Vendor'
+  },
+  supermarketId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Vendor'
   }
-}, { timestamps: true });
+}, { timestamps: true, strict: false });
 
 // Index for geospatial rider queries
 userSchema.index({ 'riderProfile.currentLocation': '2dsphere' });
