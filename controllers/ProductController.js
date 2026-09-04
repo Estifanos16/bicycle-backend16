@@ -58,14 +58,13 @@ exports.createProduct = async (req, res) => {
             return res.status(400).json({ message: 'Stock cannot be negative' });
         }
 
-        // Handle image upload from multer
+        // Handle image upload from multer (memory storage)
         let images = [];
         if (req.file) {
-            // Construct the image URL using the server's base URL
-            const protocol = req.protocol;
-            const host = req.get('host');
-            const imageUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
-            images = [imageUrl];
+            // Convert buffer to base64 string
+            const base64Image = req.file.buffer.toString('base64');
+            const mimeType = req.file.mimetype;
+            images = [`data:${mimeType};base64,${base64Image}`];
         } else if (req.body.image && typeof req.body.image === 'string') {
             // Fallback to base64 or image URL string if provided
             images = [req.body.image];
@@ -190,13 +189,12 @@ exports.updateProduct = async (req, res) => {
         if (category !== undefined) product.category = category;
         if (stock !== undefined) product.stock = stock;
         
-        // Handle image upload from multer
+        // Handle image upload from multer (memory storage)
         if (req.file) {
-            // Construct the image URL using the server's base URL
-            const protocol = req.protocol;
-            const host = req.get('host');
-            const imageUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
-            product.images = [imageUrl];
+            // Convert buffer to base64 string
+            const base64Image = req.file.buffer.toString('base64');
+            const mimeType = req.file.mimetype;
+            product.images = [`data:${mimeType};base64,${base64Image}`];
         } else if (req.body.image) {
             // Fallback to base64 if provided
             product.images = [req.body.image];
