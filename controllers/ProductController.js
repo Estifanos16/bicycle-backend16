@@ -44,13 +44,17 @@ exports.createProduct = async (req, res) => {
         const { name, price, description, category, stock } = req.body;
 
         // Validation before creation
-        if (!name || price === undefined) {
+        if (!name || price === undefined || price === null || price === '') {
             return res.status(400).json({ message: 'Name and price are required' });
         }
-        if (price < 0) {
+        
+        const numPrice = Number(price);
+        if (isNaN(numPrice) || numPrice < 0) {
             return res.status(400).json({ message: 'Price must be a positive number' });
         }   
-        if (stock !== undefined && stock < 0) {
+        
+        const numStock = stock !== undefined && stock !== '' ? Number(stock) : 0;
+        if (isNaN(numStock) || numStock < 0) {
             return res.status(400).json({ message: 'Stock cannot be negative' });
         }
 
@@ -62,23 +66,27 @@ exports.createProduct = async (req, res) => {
             const host = req.get('host');
             const imageUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
             images = [imageUrl];
-        } else if (req.body.image) {
-            // Fallback to base64 if provided
+        } else if (req.body.image && typeof req.body.image === 'string') {
+            // Fallback to base64 or image URL string if provided
             images = [req.body.image];
         }
 
-        const effectiveVendorId = req.user.vendorId || req.user.supermarketId || req.user._id;
+        const rawVendorId = (req.user && (req.user.vendorId || req.user.supermarketId || req.user._id)) || 
+                            req.body?.vendorId || req.body?.vendor || req.body?.supermarketId;
 
         const productData = {
             name,
-            price,
-            description,
+            price: numPrice,
+            description: description || '',
             category: category || 'General',
-            stock: stock !== undefined ? stock : 0,
-            vendorId: effectiveVendorId,
-            vendor: effectiveVendorId,
-            supermarketId: effectiveVendorId
+            stock: numStock
         };
+
+        if (rawVendorId && mongoose.Types.ObjectId.isValid(rawVendorId)) {
+            productData.vendorId = rawVendorId;
+            productData.vendor = rawVendorId;
+            productData.supermarketId = rawVendorId;
+        }
 
         if (images.length > 0) {
             productData.images = images;
@@ -96,7 +104,7 @@ exports.createProduct = async (req, res) => {
         });
     } catch (error) {
         console.error('Error creating product:', error);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: error.message || 'Server error creating product' });
     }
 };
 
