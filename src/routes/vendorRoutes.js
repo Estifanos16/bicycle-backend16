@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const {
-  createVendor,
-  getVendors,
-  getVendorById,
-  updateVendor,
-  approveVendor,
-  getNearbyVendors,
-  deleteVendor
+    createVendor,
+    getVendors,
+    getVendorById,
+    updateVendor,
+    approveVendor,
+    getNearbyVendors,
+    deleteVendor,
 } = require('../controllers/vendorController');
 const { protect } = require('../middleware/authMiddleware');
 const { authorizeRoles } = require('../middleware/roleMiddleware');

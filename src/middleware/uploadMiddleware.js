@@ -7,10 +7,10 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Configure storage - use memory storage for serverless platforms like Render
+// Memory storage for serverless platforms like Render
 const storage = multer.memoryStorage();
 
-// File filter to accept only images
+// File filter — accept images only
 const fileFilter = (req, file, cb) => {
   const allowedTypes = /jpeg|jpg|png|gif|webp/;
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -23,13 +23,10 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Initialize multer
 const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
-  }
+  storage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 } // 5 MB
 });
 
 module.exports = upload;

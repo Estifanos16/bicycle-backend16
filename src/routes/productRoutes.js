@@ -1,25 +1,25 @@
 const express = require('express');
 const router = express.Router();
-const { 
-  createProduct, 
-  getProducts, 
-  updateProduct, 
-  deleteProduct, 
-  getProductById, 
-  getProductsByVendor,
-  getMyVendorProducts 
-} = require('../controllers/ProductController');
+const {
+    createProduct,
+    getProducts,
+    updateProduct,
+    deleteProduct,
+    getProductById,
+    getProductsByVendor,
+    getMyVendorProducts,
+} = require('../controllers/productController');
 const { protect, optionalProtect } = require('../middleware/authMiddleware');
 const { authorizeRoles } = require('../middleware/roleMiddleware');
-const upload = require('../middleware/upload'); 
+const upload = require('../middleware/uploadMiddleware');
 
 // Get products belonging strictly to the logged-in vendor (MUST be before /vendor/:vendorId)
 router.get('/vendor/mine', protect, authorizeRoles('supermarket', 'vendor_staff', 'admin'), getMyVendorProducts);
 
-// Get products by vendor ID (dynamic parameter - must come after static routes)
+// Get products by vendor ID (dynamic — must come after static routes)
 router.get('/vendor/:vendorId', getProductsByVendor);
 
-// Get all products (supports ?vendorId= query parameter, or auto-scopes if vendor logged in)
+// Get all products (supports ?vendorId= or auto-scopes if vendor is logged in)
 router.get('/', optionalProtect, getProducts);
 
 // Protected vendor CRUD routes

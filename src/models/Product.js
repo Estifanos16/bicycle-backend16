@@ -32,9 +32,19 @@ const productSchema = new mongoose.Schema({
   },
   unit: {
     type: String,
-    enum: ['kg', 'each', 'pack', 'liter', 'dozen'],
-    default: 'each'
+    enum: ['piece', 'kg', 'g', 'liter', 'ml', 'pack', 'box'],
+    default: 'piece'
   },
+  variants: [{
+    name: String,
+    sku: String,
+    price: Number,
+    stock: Number,
+    attributes: {
+      type: Map,
+      of: String
+    }
+  }],
   sku: String,
   barcode: String,
   vendorId: {
