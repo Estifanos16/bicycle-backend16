@@ -39,6 +39,37 @@ const checkProductOwnership = async (product, user) => {
     return vendorIds.includes(prodVendorId);
 };
 
+// Helper to extract and sanitize image strings
+const extractValidImages = (req) => {
+    if (req.file) {
+        const base64Image = req.file.buffer.toString('base64');
+        const mimeType = req.file.mimetype;
+        return [`data:${mimeType};base64,${base64Image}`];
+    }
+    
+    let raw = req.body.images || req.body.image;
+    if (!raw) return [];
+    
+    if (typeof raw === 'string') {
+        try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) raw = parsed;
+        } catch (e) {
+            raw = [raw];
+        }
+    }
+    
+    if (!Array.isArray(raw)) raw = [raw];
+
+    return raw
+        .map(img => {
+            if (typeof img === 'string') return img.trim();
+            if (typeof img === 'object' && img !== null && img.url) return String(img.url).trim();
+            return null;
+        })
+        .filter(img => img && typeof img === 'string' && img !== '[object Object]' && img !== '[ {} ]' && !img.includes('{}') && img.length > 0);
+};
+
 exports.createProduct = async (req, res) => {
     try {
         const { name, price, description, category, stock } = req.body;
@@ -58,37 +89,31 @@ exports.createProduct = async (req, res) => {
             return res.status(400).json({ message: 'Stock cannot be negative' });
         }
 
-        // Handle image upload from multer (memory storage)
-        let images = [];
-        if (req.file) {
-            // Convert buffer to base64 string
-            const base64Image = req.file.buffer.toString('base64');
-            const mimeType = req.file.mimetype;
-            images = [`data:${mimeType};base64,${base64Image}`];
-        } else if (req.body.image && typeof req.body.image === 'string') {
-            // Fallback to base64 or image URL string if provided
-            images = [req.body.image];
-        }
+        const images = extractValidImages(req);
 
-        const rawVendorId = (req.user && (req.user.vendorId || req.user.supermarketId || req.user._id)) || 
-                            req.body?.vendorId || req.body?.vendor || req.body?.supermarketId;
+        let rawVendorId = req.user?.vendorId || req.user?.supermarketId || req.body?.vendorId || req.body?.vendor || req.body?.supermarketId;
+        if (!rawVendorId && req.user?._id) {
+            const vendorDoc = await Vendor.findOne({ ownerId: req.user._id });
+            if (vendorDoc) {
+                rawVendorId = vendorDoc._id;
+            } else {
+                rawVendorId = req.user._id;
+            }
+        }
 
         const productData = {
             name,
             price: numPrice,
             description: description || '',
             category: category || 'General',
-            stock: numStock
+            stock: numStock,
+            images
         };
 
         if (rawVendorId && mongoose.Types.ObjectId.isValid(rawVendorId)) {
             productData.vendorId = rawVendorId;
             productData.vendor = rawVendorId;
             productData.supermarketId = rawVendorId;
-        }
-
-        if (images.length > 0) {
-            productData.images = images;
         }
 
         const product = await Product.create(productData);
@@ -189,15 +214,9 @@ exports.updateProduct = async (req, res) => {
         if (category !== undefined) product.category = category;
         if (stock !== undefined) product.stock = stock;
         
-        // Handle image upload from multer (memory storage)
-        if (req.file) {
-            // Convert buffer to base64 string
-            const base64Image = req.file.buffer.toString('base64');
-            const mimeType = req.file.mimetype;
-            product.images = [`data:${mimeType};base64,${base64Image}`];
-        } else if (req.body.image) {
-            // Fallback to base64 if provided
-            product.images = [req.body.image];
+        const newImages = extractValidImages(req);
+        if (newImages.length > 0) {
+            product.images = newImages;
         }
         
         await product.save();

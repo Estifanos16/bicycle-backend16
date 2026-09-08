@@ -162,6 +162,5 @@ const orderSchema = new mongoose.Schema(
 orderSchema.index({ customerId: 1, createdAt: -1 });
 orderSchema.index({ vendorId: 1, status: 1 });
 orderSchema.index({ riderId: 1, status: 1 });
-orderSchema.index({ orderNumber: 1 });
 
 module.exports = mongoose.model('Order', orderSchema); // ✅ Must export like this
