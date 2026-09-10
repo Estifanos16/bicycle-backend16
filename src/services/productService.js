@@ -47,41 +47,73 @@ const checkProductOwnership = async (product, user) => {
 
 /**
  * Extract and sanitize product image strings from the request.
+ * Handles both disk storage (file paths) and memory storage (base64).
  */
 const extractValidImages = (req) => {
-    if (req.file) {
-        const base64Image = req.file.buffer.toString('base64');
-        return [`data:${req.file.mimetype};base64,${base64Image}`];
+    const images = [];
+
+    // Handle multiple file uploads from multer.array('images')
+    if (req.files && Array.isArray(req.files)) {
+        req.files.forEach((file) => {
+            if (file.buffer) {
+                // Memory storage (serverless) - convert to base64
+                const base64Image = file.buffer.toString('base64');
+                images.push(`data:${file.mimetype};base64,${base64Image}`);
+            } else if (file.filename) {
+                // Disk storage (local) - use file path
+                const protocol = req.protocol;
+                const host = req.get('host');
+                images.push(`${protocol}://${host}/uploads/${file.filename}`);
+            }
+        });
     }
 
-    let raw = req.body.images || req.body.image;
-    if (!raw) return [];
-
-    if (typeof raw === 'string') {
-        try {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) raw = parsed;
-        } catch (e) {
-            raw = [raw];
+    // Handle single file upload (backward compatibility)
+    if (req.file) {
+        if (req.file.buffer) {
+            const base64Image = req.file.buffer.toString('base64');
+            images.push(`data:${req.file.mimetype};base64,${base64Image}`);
+        } else if (req.file.filename) {
+            const protocol = req.protocol;
+            const host = req.get('host');
+            images.push(`${protocol}://${host}/uploads/${req.file.filename}`);
         }
     }
 
-    if (!Array.isArray(raw)) raw = [raw];
+    // Handle URL/base64 strings from form data
+    let raw = req.body.images || req.body.image;
+    if (raw) {
+        if (typeof raw === 'string') {
+            try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) raw = parsed;
+            } catch (e) {
+                raw = [raw];
+            }
+        }
 
-    return raw
-        .map(img => {
-            if (typeof img === 'string') return img.trim();
-            if (typeof img === 'object' && img !== null && img.url) return String(img.url).trim();
-            return null;
-        })
-        .filter(img =>
-            img &&
-            typeof img === 'string' &&
-            img !== '[object Object]' &&
-            img !== '[ {} ]' &&
-            !img.includes('{}') &&
-            img.length > 0
-        );
+        if (!Array.isArray(raw)) raw = [raw];
+
+        raw.forEach(img => {
+            if (typeof img === 'string') {
+                const trimmed = img.trim();
+                if (trimmed && 
+                    trimmed !== '[object Object]' && 
+                    trimmed !== '[ {} ]' && 
+                    !trimmed.includes('{}') && 
+                    trimmed.length > 0) {
+                    images.push(trimmed);
+                }
+            } else if (typeof img === 'object' && img !== null && img.url) {
+                const url = String(img.url).trim();
+                if (url && url.length > 0) {
+                    images.push(url);
+                }
+            }
+        });
+    }
+
+    return images;
 };
 
 const validUnits = ['piece', 'kg', 'g', 'liter', 'ml', 'pack', 'box'];

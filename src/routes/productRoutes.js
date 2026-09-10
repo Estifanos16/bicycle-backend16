@@ -23,8 +23,8 @@ router.get('/vendor/:vendorId', getProductsByVendor);
 router.get('/', optionalProtect, getProducts);
 
 // Protected vendor CRUD routes
-router.post('/', protect, authorizeRoles('supermarket', 'vendor_staff', 'admin'), upload.single('image'), createProduct);
-router.put('/:id', protect, authorizeRoles('supermarket', 'vendor_staff', 'admin'), upload.single('image'), updateProduct);
+router.post('/', protect, authorizeRoles('supermarket', 'vendor_staff', 'admin'), upload.array, createProduct);
+router.put('/:id', protect, authorizeRoles('supermarket', 'vendor_staff', 'admin'), upload.array, updateProduct);
 router.delete('/:id', protect, authorizeRoles('supermarket', 'vendor_staff', 'admin'), deleteProduct);
 
 // Get single product

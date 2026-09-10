@@ -7,8 +7,22 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Memory storage for serverless platforms like Render
-const storage = multer.memoryStorage();
+// Use disk storage for local development (allows static file serving)
+// Use memory storage for serverless platforms like Render
+const isServerless = process.env.NODE_ENV === 'production' || process.env.RENDER || process.env.VERCEL;
+
+const storage = isServerless
+  ? multer.memoryStorage()
+  : multer.diskStorage({
+      destination: (req, file, cb) => {
+        cb(null, uploadDir);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname);
+        cb(null, 'product-' + uniqueSuffix + ext);
+      }
+    });
 
 // File filter — accept images only
 const fileFilter = (req, file, cb) => {
@@ -29,4 +43,11 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 } // 5 MB
 });
 
+// Export both single and multi-file upload configurations
 module.exports = upload;
+module.exports.single = upload.single('image');
+module.exports.array = upload.array('images', 5); // Up to 5 images
+module.exports.fields = upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'gallery', maxCount: 4 }
+]);
