@@ -12,6 +12,7 @@ const {
     deleteProductById,
 } = require('../services/productService');
 const Vendor = require('../models/Vendor');
+const Product = require('../models/Product');
 
 exports.createProduct = async (req, res) => {
     try {
@@ -197,5 +198,65 @@ exports.getProductsByVendor = async (req, res) => {
         res.status(200).json(products);
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+};
+
+exports.streamProducts = async (req, res) => {
+    // Set SSE Headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    try {
+        // Build filter based on query params
+        const filter = {};
+        const requestedVendorId = req.query.vendorId || req.query.vendor || req.query.supermarketId;
+
+        if (requestedVendorId) {
+            filter.$or = [
+                { vendorId: requestedVendorId },
+                { vendor: requestedVendorId },
+                { supermarketId: requestedVendorId },
+            ];
+        } else if (req.user) {
+            const userRoles = req.user.roles || [];
+            const isVendor = userRoles.includes('supermarket') ||
+                userRoles.includes('vendor') ||
+                userRoles.includes('vendor_staff') ||
+                userRoles.includes('supermarket_owner') ||
+                req.user.role === 'vendor';
+            if (isVendor) {
+                const vendorIds = await getVendorIdsForUser(req.user);
+                filter.$or = [
+                    { vendorId: { $in: vendorIds } },
+                    { vendor: { $in: vendorIds } },
+                    { supermarketId: { $in: vendorIds } },
+                ];
+            }
+        }
+
+        if (req.query.category && req.query.category !== 'All') {
+            filter.category = req.query.category;
+        }
+
+        // Stream products directly from MongoDB cursor
+        const cursor = Product.find(filter).populate('vendorId', 'name logoUrl email').cursor();
+
+        for await (const doc of cursor) {
+            // Send individual product as an SSE data payload
+            res.write(`data: ${JSON.stringify(doc)}\n\n`);
+            
+            // Optional small artificial delay to make the sequential rendering visible
+            await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+
+        // Signal completion
+        res.write('event: end\ndata: {"status": "done"}\n\n');
+        res.end();
+    } catch (error) {
+        res.write(`event: error\ndata: ${JSON.stringify({ error: error.message })}\n\n`);
+        res.end();
     }
 };

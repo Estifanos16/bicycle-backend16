@@ -8,6 +8,7 @@ const {
     getProductById,
     getProductsByVendor,
     getMyVendorProducts,
+    streamProducts,
 } = require('../controllers/productController');
 const { protect, optionalProtect } = require('../middleware/authMiddleware');
 const { authorizeRoles } = require('../middleware/roleMiddleware');
@@ -21,6 +22,9 @@ router.get('/vendor/:vendorId', getProductsByVendor);
 
 // Get all products (supports ?vendorId= or auto-scopes if vendor is logged in)
 router.get('/', optionalProtect, getProducts);
+
+// SSE streaming endpoint for real-time product rendering
+router.get('/stream', optionalProtect, streamProducts);
 
 // Protected vendor CRUD routes
 router.post('/', protect, authorizeRoles('supermarket', 'vendor_staff', 'admin'), upload.array, createProduct);
