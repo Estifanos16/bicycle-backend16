@@ -1,11 +1,14 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const swaggerJsdoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
 const connectDB = require('./src/config/db');
 const authRoutes = require('./src/routes/authRoutes');
 const orderRoutes = require('./src/routes/orderRoutes');
 const productRoutes = require('./src/routes/productRoutes');
 const vendorRoutes = require('./src/routes/vendorRoutes');
+const vendorProfileRoutes = require('./src/routes/vendorProfileRoutes');
 const cartRoutes = require('./src/routes/cartRoutes');
 
 // Load env variables
@@ -22,7 +25,9 @@ const allowedOrigins = [
   process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, "") : 'https://bicycle-frontend-rrsi.vercel.app',
   'https://bicycle-frontend.vercel.app',
   'http://localhost:5173',  // For local Vite development
-  'http://localhost:3000'   // For local React development
+  'http://localhost:3000',   // For local React development
+  'http://localhost:5000',  // For local backend development (Swagger UI)
+  undefined  // Allow requests with no origin (like curl, Postman, etc.)
 ];
 
 const corsOptions = {
@@ -44,12 +49,53 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// Swagger Configuration
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'Bicycle App API',
+      version: '1.0.0',
+      description: 'API documentation for Bicycle App - A multi-vendor delivery platform',
+    },
+    servers: [
+      {
+        url: 'http://localhost:5000',
+        description: 'Development server',
+      },
+      {
+        url: process.env.API_URL || 'https://bicycle-backend.onrender.com',
+        description: 'Production server',
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+    security: [
+      {
+        bearerAuth: [],
+      },
+    ],
+  },
+  apis: ['./src/routes/*.js', './src/controllers/*.js'],
+};
+
+const swaggerDocs = swaggerJsdoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
 // Serve static files from uploads directory
 app.use('/uploads', express.static('uploads'));
 app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/vendors', vendorRoutes);
+app.use('/api/vendor', vendorProfileRoutes);
 app.use('/api/cart', cartRoutes);
 
 // Test route

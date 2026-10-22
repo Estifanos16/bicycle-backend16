@@ -25,11 +25,11 @@ const vendorSchema = new mongoose.Schema({
     type: {
       type: String,
       enum: ['Point'],
-      required: true
+      default: 'Point'
     },
     coordinates: {
       type: [Number],
-      required: true
+      default: [38.7578, 8.9638] // Default to Addis Ababa coordinates
     }
   },
   deliveryZone: {
@@ -40,7 +40,13 @@ const vendorSchema = new mongoose.Schema({
     },
     coordinates: {
       type: [[[Number]]],
-      default: []
+      default: [[
+        [38.7, 8.9],
+        [38.8, 8.9],
+        [38.8, 9.0],
+        [38.7, 9.0],
+        [38.7, 8.9]
+      ]] // Default delivery zone around Addis Ababa
     }
   },
   commissionRate: {
@@ -87,10 +93,10 @@ const vendorSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Create geospatial index for location queries
-vendorSchema.index({ location: '2dsphere' });
+// Create geospatial index for location queries (sparse - optional)
+vendorSchema.index({ location: '2dsphere' }, { sparse: true });
 
-// Create index for delivery zone queries
-vendorSchema.index({ deliveryZone: '2dsphere' });
+// Create index for delivery zone queries (sparse - optional)
+vendorSchema.index({ deliveryZone: '2dsphere' }, { sparse: true });
 
 module.exports = mongoose.model('Vendor', vendorSchema);

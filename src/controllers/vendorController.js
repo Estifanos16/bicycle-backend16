@@ -1,4 +1,5 @@
 const Vendor = require('../models/Vendor');
+const User = require('../models/User');
 
 // Create vendor (Admin or during registration)
 exports.createVendor = async (req, res) => {
@@ -9,6 +10,7 @@ exports.createVendor = async (req, res) => {
       description,
       address,
       location,
+      deliveryZone,
       operatingHours,
       ownerId
     } = req.body;
@@ -18,20 +20,28 @@ exports.createVendor = async (req, res) => {
       return res.status(400).json({ message: 'Name and owner ID are required' });
     }
 
-    if (!location || !location.coordinates || location.coordinates.length !== 2) {
-      return res.status(400).json({ message: 'Valid location coordinates are required [longitude, latitude]' });
-    }
-
-    const vendor = await Vendor.create({
+    // Location and deliveryZone are now optional - defaults will be used if not provided
+    const vendorData = {
       name,
       logoUrl,
       description,
       address,
-      location,
       operatingHours,
       ownerId,
       isApproved: false // Requires admin approval
-    });
+    };
+
+    // Only add location if provided, otherwise schema default will be used
+    if (location && location.coordinates && location.coordinates.length === 2) {
+      vendorData.location = location;
+    }
+
+    // Only add deliveryZone if provided, otherwise schema default will be used
+    if (deliveryZone && deliveryZone.coordinates) {
+      vendorData.deliveryZone = deliveryZone;
+    }
+
+    const vendor = await Vendor.create(vendorData);
 
     res.status(201).json({
       message: 'Vendor created successfully',
@@ -45,8 +55,10 @@ exports.createVendor = async (req, res) => {
 // Get all vendors (public)
 exports.getVendors = async (req, res) => {
   try {
+    // Query the Vendor collection directly for approved vendors
     const vendors = await Vendor.find({ isApproved: true })
-      .populate('ownerId', 'name email');
+      .populate('ownerId', 'name email branding operations');
+
     res.status(200).json(vendors);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -113,15 +125,76 @@ exports.updateVendor = async (req, res) => {
   }
 };
 
-// Approve vendor (Admin only)
+// Approve vendor (Admin only) - accepts Vendor ID or User ID
 exports.approveVendor = async (req, res) => {
   try {
-    const vendor = await Vendor.findById(req.params.id);
-    
+    const id = req.params.id;
+
+    // First try to find by Vendor ID
+    let vendor = await Vendor.findById(id);
+
+    // If not found, try to find by User ID (ownerId)
     if (!vendor) {
-      return res.status(404).json({ message: 'Vendor not found' });
+      const user = await User.findById(id);
+
+      if (!user) {
+        return res.status(404).json({ message: 'Vendor or User not found' });
+      }
+
+      // Check if user is a vendor
+      if (!user.roles.includes('supermarket') && !user.roles.includes('vendor_staff')) {
+        return res.status(400).json({ message: 'User is not a vendor' });
+      }
+
+      // Check if vendor already exists for this user
+      const existingVendor = await Vendor.findOne({ ownerId: user._id });
+
+      if (existingVendor) {
+        // Approve existing vendor
+        existingVendor.isApproved = true;
+        await existingVendor.save();
+        return res.status(200).json({ message: 'Vendor approved', vendor: existingVendor });
+      }
+
+      // Create new vendor document from user data
+      vendor = await Vendor.create({
+        name: user.branding?.storeName || user.name,
+        description: user.branding?.businessBio || '',
+        address: {
+          street: user.operations?.streetAddress || '',
+          city: user.operations?.city || '',
+          state: user.operations?.region || '',
+          zipCode: user.operations?.postalCode || '',
+          country: 'Ethiopia'
+        },
+        location: {
+          type: 'Point',
+          coordinates: [38.7578, 8.9638] // Default to Addis Ababa
+        },
+        deliveryZone: {
+          type: 'Polygon',
+          coordinates: [[
+            [38.7, 8.9],
+            [38.8, 8.9],
+            [38.8, 9.0],
+            [38.7, 9.0],
+            [38.7, 8.9]
+          ]]
+        },
+        ownerId: user._id,
+        isApproved: true,
+        isOpen: true
+      });
+
+      // Link vendor to user
+      user.supermarketId = vendor._id;
+      user.vendorId = vendor._id;
+      await user.save();
+
+      return res.status(200).json({ message: 'Vendor created and approved', vendor });
     }
 
+    // Vendor found by ID - just approve it
     vendor.isApproved = true;
     await vendor.save();
 

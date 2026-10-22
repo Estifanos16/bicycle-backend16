@@ -2,6 +2,87 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+// UPDATE VENDOR PROFILE
+exports.updateVendorProfile = async (req, res) => {
+  try {
+    const { branding, operations, banking } = req.body;
+    const userId = req.user._id;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if user is a vendor/supermarket
+    if (!user.roles.includes('supermarket') && !user.roles.includes('vendor_staff')) {
+      return res.status(403).json({ message: 'Unauthorized. Only vendors can update their profile.' });
+    }
+
+    // Update vendor profile fields
+    if (branding) {
+      user.branding = { ...user.branding, ...branding };
+    }
+    if (operations) {
+      user.operations = { ...user.operations, ...operations };
+    }
+    if (banking) {
+      user.banking = { ...user.banking, ...banking };
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      message: 'Vendor profile updated successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        roles: user.roles,
+        branding: user.branding,
+        operations: user.operations,
+        banking: user.banking
+      }
+    });
+  } catch (error) {
+    console.error('Update vendor profile error:', error);
+    res.status(500).json({ message: 'Server error: ' + error.message });
+  }
+};
+
+// GET VENDOR PROFILE
+exports.getVendorProfile = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if user is a vendor/supermarket
+    if (!user.roles.includes('supermarket') && !user.roles.includes('vendor_staff')) {
+      return res.status(403).json({ message: 'Unauthorized. Only vendors can view their profile.' });
+    }
+
+    res.status(200).json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        roles: user.roles,
+        branding: user.branding,
+        operations: user.operations,
+        banking: user.banking
+      }
+    });
+  } catch (error) {
+    console.error('Get vendor profile error:', error);
+    res.status(500).json({ message: 'Server error: ' + error.message });
+  }
+};
+
 // REGISTER USER
 exports.registerUser = async (req, res) => {
   try {
