@@ -88,7 +88,22 @@ const vendorSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
-  }
+  },
+  paymentMethods: [{
+    type: {
+      type: String,
+      required: true,
+      enum: ['telebirr', 'cbe', 'bank', 'mobile', 'cash']
+    },
+    name: {
+      type: String,
+      required: true
+    },
+    accountNumber: String,
+    phoneNumber: String,
+    accountHolder: String,
+    bankName: String
+  }]
 }, {
   timestamps: true
 });

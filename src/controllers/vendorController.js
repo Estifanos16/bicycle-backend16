@@ -1,6 +1,84 @@
 const Vendor = require('../models/Vendor');
 const User = require('../models/User');
 
+// Get user banking info by ID (public endpoint for checkout)
+exports.getUserBankingInfo = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId).select('name email branding banking');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Transform banking data into payment methods format
+    const paymentMethods = [];
+    
+    if (user.banking) {
+      // Add CBE accounts
+      if (user.banking.cbeAccounts && user.banking.cbeAccounts.length > 0) {
+        user.banking.cbeAccounts.forEach(account => {
+          paymentMethods.push({
+            type: 'cbe',
+            name: 'CBE Birr',
+            accountNumber: account.accountNumber,
+            accountHolder: account.accountHolderName,
+            bankName: account.bankName,
+            phoneNumber: account.phone
+          });
+        });
+      }
+      
+      // Add other bank accounts
+      if (user.banking.otherBankAccounts && user.banking.otherBankAccounts.length > 0) {
+        user.banking.otherBankAccounts.forEach(account => {
+          paymentMethods.push({
+            type: 'bank',
+            name: account.bankName || 'Bank Account',
+            accountNumber: account.accountNumber,
+            accountHolder: account.accountHolderName,
+            bankName: account.bankName,
+            phoneNumber: account.phone
+          });
+        });
+      }
+      
+      // Add Telebirr accounts
+      if (user.banking.telebirrAccounts && user.banking.telebirrAccounts.length > 0) {
+        user.banking.telebirrAccounts.forEach(account => {
+          paymentMethods.push({
+            type: 'telebirr',
+            name: 'Telebirr',
+            accountNumber: account.accountId?.toString(),
+            phoneNumber: account.phone,
+            accountHolder: account.registeredName
+          });
+        });
+      }
+      
+      // Add other wallet accounts
+      if (user.banking.otherWalletAccounts && user.banking.otherWalletAccounts.length > 0) {
+        user.banking.otherWalletAccounts.forEach(account => {
+          paymentMethods.push({
+            type: 'mobile',
+            name: account.walletType || 'Mobile Wallet',
+            accountNumber: account.accountId?.toString(),
+            phoneNumber: account.phone,
+            accountHolder: account.registeredName
+          });
+        });
+      }
+    }
+    
+    res.status(200).json({
+      name: user.name,
+      storeName: user.branding?.storeName,
+      paymentMethods
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Create vendor (Admin or during registration)
 exports.createVendor = async (req, res) => {
   try {
@@ -73,6 +151,22 @@ exports.getVendorById = async (req, res) => {
     
     if (!vendor) {
       return res.status(404).json({ message: 'Vendor not found' });
+    }
+    
+    res.status(200).json(vendor);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get vendor by owner ID (User ID)
+exports.getVendorByOwnerId = async (req, res) => {
+  try {
+    const vendor = await Vendor.findOne({ ownerId: req.params.ownerId })
+      .populate('ownerId', 'name email');
+    
+    if (!vendor) {
+      return res.status(404).json({ message: 'Vendor not found for this owner' });
     }
     
     res.status(200).json(vendor);

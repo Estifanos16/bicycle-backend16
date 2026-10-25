@@ -4,6 +4,8 @@ const {
     createVendor,
     getVendors,
     getVendorById,
+    getVendorByOwnerId,
+    getUserBankingInfo,
     updateVendor,
     approveVendor,
     getNearbyVendors,
@@ -73,6 +75,46 @@ router.get('/nearby', getNearbyVendors);
  *         description: Vendor not found
  */
 router.get('/:id', getVendorById);
+
+/**
+ * @swagger
+ * /api/vendors/owner/{ownerId}:
+ *   get:
+ *     summary: Get vendor by owner ID (User ID)
+ *     tags: [Vendors]
+ *     parameters:
+ *       - in: path
+ *         name: ownerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Vendor retrieved successfully
+ *       404:
+ *         description: Vendor not found
+ */
+router.get('/owner/:ownerId', getVendorByOwnerId);
+
+/**
+ * @swagger
+ * /api/vendors/user/{userId}/banking:
+ *   get:
+ *     summary: Get user banking info for checkout
+ *     tags: [Vendors]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Banking info retrieved successfully
+ *       404:
+ *         description: User not found
+ */
+router.get('/user/:userId/banking', getUserBankingInfo);
 
 /**
  * @swagger
