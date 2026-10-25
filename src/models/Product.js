@@ -49,15 +49,15 @@ const productSchema = new mongoose.Schema({
   barcode: String,
   vendorId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Vendor'
+    ref: 'User'
   },
   vendor: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Vendor'
+    ref: 'User'
   },
   supermarketId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Vendor'
+    ref: 'User'
   },
   isAvailable: {
     type: Boolean,

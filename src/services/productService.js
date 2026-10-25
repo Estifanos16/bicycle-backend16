@@ -154,16 +154,16 @@ const createProductInDB = async (productData) => {
 
 const findProductById = async (id) => {
     return await Product.findById(id)
-        .populate('vendorId', 'name logoUrl email')
-        .populate('vendor', 'name logoUrl email')
-        .populate('supermarketId', 'name logoUrl email');
+        .populate('vendorId', 'name email')
+        .populate('vendor', 'name email')
+        .populate('supermarketId', 'name email');
 };
 
 const findProductsByFilter = async (filter) => {
     return await Product.find(filter)
-        .populate('vendorId', 'name logoUrl email')
-        .populate('vendor', 'name logoUrl email')
-        .populate('supermarketId', 'name logoUrl email');
+        .populate('vendorId', 'name email')
+        .populate('vendor', 'name email')
+        .populate('supermarketId', 'name email');
 };
 
 const saveProduct = async (product) => {

@@ -23,6 +23,10 @@ exports.updateVendorProfile = async (req, res) => {
     // Update vendor profile fields in User document
     if (branding) {
       user.branding = { ...user.branding, ...branding };
+      // Also update the user's name if storeName is provided
+      if (branding.storeName) {
+        user.name = branding.storeName;
+      }
     }
     if (operations) {
       user.operations = { ...user.operations, ...operations };
