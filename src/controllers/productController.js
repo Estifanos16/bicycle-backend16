@@ -242,7 +242,11 @@ exports.streamProducts = async (req, res) => {
         }
 
         // Stream products directly from MongoDB cursor
-        const cursor = Product.find(filter).populate('vendorId', 'name logoUrl email').cursor();
+        const cursor = Product.find(filter)
+            .populate('vendorId', 'name logoUrl email')
+            .populate('vendor', 'name logoUrl email')
+            .populate('supermarketId', 'name logoUrl email')
+            .cursor();
 
         for await (const doc of cursor) {
             // Send individual product as an SSE data payload

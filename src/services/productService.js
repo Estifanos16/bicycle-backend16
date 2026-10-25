@@ -153,11 +153,17 @@ const createProductInDB = async (productData) => {
 };
 
 const findProductById = async (id) => {
-    return await Product.findById(id).populate('vendorId', 'name logoUrl email');
+    return await Product.findById(id)
+        .populate('vendorId', 'name logoUrl email')
+        .populate('vendor', 'name logoUrl email')
+        .populate('supermarketId', 'name logoUrl email');
 };
 
 const findProductsByFilter = async (filter) => {
-    return await Product.find(filter).populate('vendorId', 'name logoUrl email');
+    return await Product.find(filter)
+        .populate('vendorId', 'name logoUrl email')
+        .populate('vendor', 'name logoUrl email')
+        .populate('supermarketId', 'name logoUrl email');
 };
 
 const saveProduct = async (product) => {

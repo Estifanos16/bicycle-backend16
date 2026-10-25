@@ -12,7 +12,7 @@ const {
 
 exports.createOrder = async (req, res) => {
     try {
-        const { items, deliveryAddress, vendorId, idempotencyKey } = req.body;
+        const { items, deliveryAddress, deliveryLocation, vendorId, paymentMethod, idempotencyKey } = req.body;
 
         if (!items || items.length === 0) {
             return res.status(400).json({ message: 'No items in order' });
@@ -62,9 +62,13 @@ exports.createOrder = async (req, res) => {
                 discount: 0,
                 tip: 0,
                 total: totalPrice,
-                currency: 'USD',
+                currency: 'ETB',
             },
-            deliveryAddress: { fullAddress: deliveryAddress },
+            deliveryAddress: { 
+                fullAddress: deliveryAddress,
+                location: deliveryLocation || null
+            },
+            paymentMethod: paymentMethod || 'cash',
             idempotencyKey: idempotencyKey || null,
         });
 
